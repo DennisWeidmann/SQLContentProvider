@@ -25,16 +25,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
- * Example usage:
- * $sqlQuery = "INSERT INTO ExampleTable (example_column_integer, example_column_string) VALUES (?, ?)";
- * $new_auto_incremented_id = SQLContentProvider::setData($sqlQuery, array("example_column_integer", "example_column_string"), array($integer_value, $string_value));
- *
- * $sqlQuery = "UPDATE ExampleTable SET example_column_integer = ?, example_column_string = ? WHERE example_column_id = ?";
- * SQLContentProvider::setData($sqlQuery, array("example_column_integer", "example_column_id", "example_column_id"), array($integer_value, $string_value, $id_value));
- *
- * $sqlQuery = "SELECT example_column_integer, example_column_string FROM ExampleTable WHERE example_column_id = ? LIMIT 1";
- * $sql_select_result_array = SQLContentProvider::getData($sqlQuery, array("example_column_id"), array($id_value));
  */
 
 class SQLContentProvider {
@@ -45,10 +35,10 @@ class SQLContentProvider {
     const SQLDB = "";
 
     /** @const Class constant MySQL User */
-	const SQLUSER = "";
+    const SQLUSER = "";
 
     /** @const Class constant MySQL Password */
-	const SQLPASS = "";
+    const SQLPASS = "";
 
 
     /**
