@@ -40,31 +40,208 @@ class SQLContentProvider {
     /** @const Class constant MySQL Password */
     const SQLPASS = "";
 
+    /** @const Class constant Data Types cache file */
+    const SQLCONTENTPROVIDERCACHEFILE = "SQLContentProviderDataTypes.json";
+
 
     /**
-     * You have to declare all MySQL column names and assign their prepared statement data types.
+     * Read data from database, returning a associative array with the results
      *
-     * @param    array $fieldNameArray all ? escaped column names of the current query
+     * @param    string $sqlQuery a MySQL query string
+     * @param    string $tableName MySQL Table name
+     * @param    array  $columnNameArray an array containing all ? escaped column names
+     * @param    array  $columnValueArray an array containing all ? escaped column values
      * @return   array
      */
-    private static function sqlFieldTypeValueArrayByFieldNameArray ($fieldNameArray) {
-        $fieldTypeValueArray = array();
+    public static function getData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+        $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
+        
+        $whereTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
+        $columnNameArray = self::getNameArrayFromTypeValueArray($columnNameArray);
+        
+        $returnArray = array();
+        
+        if ($columnNameArray != NULL && $whereTypeArray != NULL && count($columnNameArray) == count($whereTypeArray)) {
+            $sqlConnection = self::sqlConnect();
+            $sqlStatement = $sqlConnection->prepare($sqlQuery);
+            
+            if (count($columnNameArray) > 0) {
+                $bindArray[] = implode("", $whereTypeArray);
+                
+                for ($i=0; $i < count($columnValueArray); $i++) {
+                    $bindArray[] = &$columnValueArray[$i];
+                }
+                
+                call_user_func_array(array($sqlStatement,'bind_param'), $bindArray);
+                
+                $sqlStatement->execute();
+                $result = $sqlStatement->get_result();
+                while ($row = $result->fetch_array(MYSQLI_ASSOC)){
+                    array_push($returnArray, $row);
+                }
+            }
+        }
 
-        foreach ($fieldNameArray as $key => $value) {
-            switch ($value) {
-                case 'example_column_id':
-                    array_push($fieldTypeValueArray, array("name" => $value, "type" => "i"));
-                    break;
-                case 'example_column_integer':
-                    array_push($fieldTypeValueArray, array("name" => $value, "type" => "i"));
-                    break;
-                case 'example_column_string':
-                    array_push($fieldTypeValueArray, array("name" => $value, "type" => "s"));
-                    break;
+        return $returnArray;
+    }
+
+
+    /**
+     * Write data to database, returning the new generated id if insert auto_increment
+     *
+     * @param    string $sqlQuery a MySQL query string
+     * @param    string $tableName MySQL Table name
+     * @param    array  $columnNameArray an array containing all ? escaped column names
+     * @param    array  $columnValueArray an array containing all ? escaped column values
+     * @return   integer
+     */
+    public static function setData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+        $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
+        
+        $fieldTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
+        $columnNameArray = self::getNameArrayFromTypeValueArray($columnNameArray);
+        
+        $returnID = NULL;
+        
+        if ($columnNameArray != NULL && $fieldTypeArray != NULL && count($columnNameArray) == count($fieldTypeArray)) {
+            $sqlConnection = self::sqlConnect();
+            $sqlStatement = $sqlConnection->prepare($sqlQuery);
+            
+            if (count($columnNameArray) > 0) {
+                $bindArray[] = implode("", $fieldTypeArray);
+                
+                for ($i=0; $i < count($columnValueArray); $i++) {
+                    $bindArray[] = &$columnValueArray[$i];
+                }
+                
+                call_user_func_array(array($sqlStatement,'bind_param'), $bindArray);
+                
+                $sqlStatement->execute();
+                $returnID = $sqlStatement->insert_id;
             }
         }
         
+        return $returnID;
+    }
+
+    /**
+     * Automatic parsing of tables and columns with prepared statement data type association
+     *
+     * @param    array $fieldNameArray all ? escaped column names of the current query
+     * @param    string $tableName name of the MySQL Table
+     * @return   array
+     */
+    private static function sqlFieldTypeValueArrayByFieldNameArray ($fieldNameArray, $tableName) {
+        $fieldTypeValueArray = array();
+
+        if ($tableName == "INFORMATION_SCHEMA") {
+            foreach ($fieldNameArray as $key => $value) {
+                switch ($value) {
+                    case 'TABLE_SCHEMA':
+                        array_push($fieldTypeValueArray, array("name" => $value, "type" => "s"));
+                }
+            }
+            return $fieldTypeValueArray;
+        }
+
+        $fieldTypeInfos = array();
+        if (!file_exists(self::SQLCONTENTPROVIDERCACHEFILE)) {
+            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
+        } else {
+            $fieldTypeInfos = json_decode(file_get_contents(self::SQLCONTENTPROVIDERCACHEFILE), true);
+        }
+
+        if (!array_key_exists(strtolower($tableName), $fieldTypeInfos)) {
+            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
+        }
+
+        foreach ($fieldNameArray as $key => $value) {
+            if (!array_key_exists($value, $fieldTypeInfos[strtolower($tableName)])) {
+                $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
+            }
+            array_push($fieldTypeValueArray, array("name" => $value, "type" => $fieldTypeInfos[strtolower($tableName)][$value]));
+        }
+        
         return $fieldTypeValueArray;
+    }
+
+
+    /**
+     * Parse all Table- and Columnnames to a cache file
+     *
+     * @return   array
+     */
+    private static function parseSQLFieldTypeValueArray () {        
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?";
+        $newTypesArray = self::getData($sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
+
+        $databaseTypesObject = array();
+        foreach ($newTypesArray as $newTypesIndex => $newTypesOject) {
+            $currentTableName = strtolower($newTypesOject["TABLE_NAME"]);
+            $currentColumnName = strtolower($newTypesOject["COLUMN_NAME"]);
+            $currentColumnType = strtolower(self::preparedStatementTypeFromDataType($newTypesOject["DATA_TYPE"]));
+            $databaseTypesObject[$currentTableName][$currentColumnName] = $currentColumnType;
+        }
+
+        file_put_contents(self::SQLCONTENTPROVIDERCACHEFILE, json_encode($databaseTypesObject));
+
+        return $databaseTypesObject;
+    }
+
+
+    /**
+     * Parse Prepared Statement data types from MySQL data types
+     *
+     * @param    string $dataType MySQL data type
+     * @return   string Prepared Statement data type
+     */
+    private static function preparedStatementTypeFromDataType ($dataType) {
+        switch (strtoupper($dataType)) {
+            case 'TINYINT':
+                return "i";
+            case 'SMALLINT':
+                return "i";
+            case 'MEDIUMINT':
+                return "i";
+            case 'INT':
+                return "i";
+            case 'BIGINT':
+                return "i";
+            case 'CHAR':
+                return "s";
+            case 'VARCHAR':
+                return "s";
+            case 'DECIMAL':
+                return "d";
+            case 'NUMERIC':
+                return "d";
+            case 'FLOAT':
+                return "d";
+            case 'DOUBLE':
+                return "d";
+            case 'DATE':
+                return "s";
+            case 'DATETIME':
+                return "s";
+            case 'TIMESTAMP':
+                return "s";
+            case 'BINARY':
+                return "s";
+            case 'VARBINARY':
+                return "s";
+            case 'TINYTEXT':
+                return "s";
+            case 'TEXT':
+                return "s";
+            case 'MEDIUMTEXT':
+                return "s";
+            case 'LONGTEXT':
+                return "s";
+            case 'BLOB':
+                return "b";
+            default:
+                return NULL;
+        }
     }
 
 
@@ -118,85 +295,5 @@ class SQLContentProvider {
         
         return $typeArray;
     }
-
-
-    /**
-     * Read data from database, returning a associative array with the results
-     *
-     * @param    string $sqlQuery a MySQL query string
-     * @param    array  $columnNameArray an array containing all ? escaped column names
-     * @param    array  $columnValueArray an array containing all ? escaped column values
-     * @return   array
-     */
-    public static function getData ($sqlQuery, $columnNameArray, $columnValueArray) {
-        $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray);
-        
-        $whereTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
-        $columnNameArray = self::getNameArrayFromTypeValueArray($columnNameArray);
-        
-        $returnArray = array();
-        
-        if ($columnNameArray != NULL && $whereTypeArray != NULL && count($columnNameArray) == count($whereTypeArray)) {
-            $sqlConnection = self::sqlConnect();
-            $sqlStatement = $sqlConnection->prepare($sqlQuery);
-            
-            if (count($columnNameArray) > 0) {
-                $bindArray[] = implode("", $whereTypeArray);
-                
-                for ($i=0; $i < count($columnValueArray); $i++) {
-                    $bindArray[] = &$columnValueArray[$i];
-                }
-                
-                call_user_func_array(array($sqlStatement,'bind_param'), $bindArray);
-                
-                $sqlStatement->execute();
-                $result = $sqlStatement->get_result();
-                while ($row = $result->fetch_array(MYSQLI_ASSOC)){
-                    array_push($returnArray, $row);
-                }
-            }
-        }
-
-        return $returnArray;
-    }
-
-
-    /**
-     * Write data to database, returning the new generated id if insert auto_increment
-     *
-     * @param    string $sqlQuery a MySQL query string
-     * @param    array  $columnNameArray an array containing all ? escaped column names
-     * @param    array  $columnValueArray an array containing all ? escaped column values
-     * @return   integer
-     */
-    public static function setData ($sqlQuery, $columnNameArray, $columnValueArray) {
-        $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray);
-        
-        $fieldTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
-        $columnNameArray = self::getNameArrayFromTypeValueArray($columnNameArray);
-        
-        $returnID = NULL;
-        
-        if ($columnNameArray != NULL && $fieldTypeArray != NULL && count($columnNameArray) == count($fieldTypeArray)) {
-            $sqlConnection = self::sqlConnect();
-            $sqlStatement = $sqlConnection->prepare($sqlQuery);
-            
-            if (count($columnNameArray) > 0) {
-                $bindArray[] = implode("", $fieldTypeArray);
-                
-                for ($i=0; $i < count($columnValueArray); $i++) {
-                    $bindArray[] = &$columnValueArray[$i];
-                }
-                
-                call_user_func_array(array($sqlStatement,'bind_param'), $bindArray);
-                
-                $sqlStatement->execute();
-                $returnID = $sqlStatement->insert_id;
-            }
-        }
-        
-        return $returnID;
-    }
-    
 }
 ?>
