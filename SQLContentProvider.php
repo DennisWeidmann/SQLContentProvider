@@ -45,7 +45,28 @@ class SQLContentProvider {
 
 
     /**
-     * Read data from database, returning a associative array with the results
+     * Read data from database, returning an associative array with the results
+     *
+     * @param    string $sqlQuery a MySQL query string
+     * @param    string $tableName MySQL Table name
+     * @param    array  $columnValueDictionary an associative array containing all ? escaped column names as key and their value as value
+     * @return   array
+     */
+    public static function getDataAssoc ($sqlQuery, $tableName, $columnValueDictionary) {
+        $columnNameArray = array();
+        $columnValueArray = array();
+
+        foreach ($columnValueDictionary as $key => $value) {
+            array_push($columnNameArray, $key);
+            array_push($columnValueArray, $value);
+        }
+
+        return self::getData($sqlQuery, $tableName, $columnNameArray, $columnValueArray);
+    }
+
+
+    /**
+     * Read data from database, returning an associative array with the results
      *
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
@@ -53,7 +74,7 @@ class SQLContentProvider {
      * @param    array  $columnValueArray an array containing all ? escaped column values
      * @return   array
      */
-    public static function getData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+    private static function getData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
         $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
         
         $whereTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
@@ -91,11 +112,32 @@ class SQLContentProvider {
      *
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
+     * @param    array  $columnValueDictionary an associative array containing all ? escaped column names as key and their value as value
+     * @return   integer
+     */
+    public static function setDataAssoc ($sqlQuery, $tableName, $columnValueDictionary) {
+        $columnNameArray = array();
+        $columnValueArray = array();
+
+        foreach ($columnValueDictionary as $key => $value) {
+            array_push($columnNameArray, $key);
+            array_push($columnValueArray, $value);
+        }
+
+        return self::setData($sqlQuery, $tableName, $columnNameArray, $columnValueArray);
+    }
+
+
+    /**
+     * Write data to database, returning the new generated id if insert auto_increment
+     *
+     * @param    string $sqlQuery a MySQL query string
+     * @param    string $tableName MySQL Table name
      * @param    array  $columnNameArray an array containing all ? escaped column names
      * @param    array  $columnValueArray an array containing all ? escaped column values
      * @return   integer
      */
-    public static function setData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+    private static function setData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
         $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
         
         $fieldTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
@@ -123,6 +165,7 @@ class SQLContentProvider {
         
         return $returnID;
     }
+
 
     /**
      * Automatic parsing of tables and columns with prepared statement data type association

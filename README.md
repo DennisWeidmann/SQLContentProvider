@@ -17,19 +17,19 @@ const SQLCONTENTPROVIDERCACHEFILE = "SQLContentProviderDataTypes.json";
 ##### INSERT data to your MySQL database 
 ```php
 $sqlQuery = "INSERT INTO ExampleTable (example_column_integer, example_column_string) VALUES (?, ?)";
-$new_auto_incremented_id = SQLContentProvider::setData($sqlQuery, "ExampleTable", array("example_column_integer", "example_column_string"), array($integer_value, $string_value));
+$new_auto_incremented_id = SQLContentProvider::setDataAssoc($sqlQuery, "ExampleTable", array("example_column_integer" => $integer_value, "example_column_string" => $string_value));
 ```
 
 
 ##### UPDATE data in your MySQL database 
 ```php
 $sqlQuery = "UPDATE ExampleTable SET example_column_integer = ?, example_column_string = ? WHERE example_column_id = ?";
-SQLContentProvider::setData($sqlQuery, "ExampleTable", array("example_column_integer", "example_column_id", "example_column_id"), array($integer_value, $string_value, $id_value));
+SQLContentProvider::setDataAssoc($sqlQuery, "ExampleTable", array("example_column_integer" => $integer_value, "example_column_string" => $string_value, "example_column_id" => $id_value));
 ```
 
 
 ##### SELECT data from your MySQL database 
 ```php
 $sqlQuery = "SELECT example_column_integer, example_column_string FROM ExampleTable WHERE example_column_id = ? LIMIT 1";
-$sql_select_result_array = SQLContentProvider::getData($sqlQuery, "ExampleTable", array("example_column_id"), array($id_value));
+$sql_select_result_array = SQLContentProvider::getDataAssoc($sqlQuery, "ExampleTable", array("example_column_id" => $id_value));
 ```
