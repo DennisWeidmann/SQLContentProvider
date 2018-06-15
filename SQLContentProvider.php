@@ -47,12 +47,13 @@ class SQLContentProvider {
     /**
      * Read data from database, returning an associative array with the results
      *
+     * @param    object $sqlConnection a MySQLi database connection
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
      * @param    array  $columnValueDictionary an associative array containing all ? escaped column names as key and their value as value
      * @return   array
      */
-    public static function getDataAssoc ($sqlQuery, $tableName, $columnValueDictionary) {
+    public static function getDataAssoc ($sqlConnection, $sqlQuery, $tableName, $columnValueDictionary) {
         $columnNameArray = array();
         $columnValueArray = array();
 
@@ -61,20 +62,21 @@ class SQLContentProvider {
             array_push($columnValueArray, $value);
         }
 
-        return self::getData($sqlQuery, $tableName, $columnNameArray, $columnValueArray);
+        return self::getData($sqlConnection, $sqlQuery, $tableName, $columnNameArray, $columnValueArray);
     }
 
 
     /**
      * Read data from database, returning an associative array with the results
      *
+     * @param    object $pSqlConnection a MySQLi database connection
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
      * @param    array  $columnNameArray an array containing all ? escaped column names
      * @param    array  $columnValueArray an array containing all ? escaped column values
      * @return   array
      */
-    private static function getData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+    private static function getData ($pSqlConnection, $sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
         $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
         
         $whereTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
@@ -83,7 +85,7 @@ class SQLContentProvider {
         $returnArray = array();
         
         if ($columnNameArray != NULL && $whereTypeArray != NULL && count($columnNameArray) == count($whereTypeArray)) {
-            $sqlConnection = self::sqlConnect();
+            $sqlConnection = isset($pSqlConnection) ? $pSqlConnection : self::sqlConnect();
             $sqlStatement = $sqlConnection->prepare($sqlQuery);
             
             if (count($columnNameArray) > 0) {
@@ -110,12 +112,13 @@ class SQLContentProvider {
     /**
      * Write data to database, returning the new generated id if insert auto_increment
      *
+     * @param    object $sqlConnection a MySQLi database connection
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
      * @param    array  $columnValueDictionary an associative array containing all ? escaped column names as key and their value as value
      * @return   integer
      */
-    public static function setDataAssoc ($sqlQuery, $tableName, $columnValueDictionary) {
+    public static function setDataAssoc ($sqlConnection, $sqlQuery, $tableName, $columnValueDictionary) {
         $columnNameArray = array();
         $columnValueArray = array();
 
@@ -124,20 +127,21 @@ class SQLContentProvider {
             array_push($columnValueArray, $value);
         }
 
-        return self::setData($sqlQuery, $tableName, $columnNameArray, $columnValueArray);
+        return self::setData($sqlConnection, $sqlQuery, $tableName, $columnNameArray, $columnValueArray);
     }
 
 
     /**
      * Write data to database, returning the new generated id if insert auto_increment
      *
+     * @param    object $pSqlConnection a MySQLi database connection
      * @param    string $sqlQuery a MySQL query string
      * @param    string $tableName MySQL Table name
      * @param    array  $columnNameArray an array containing all ? escaped column names
      * @param    array  $columnValueArray an array containing all ? escaped column values
      * @return   integer
      */
-    private static function setData ($sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
+    private static function setData ($pSqlConnection, $sqlQuery, $tableName, $columnNameArray, $columnValueArray) {
         $columnNameArray = self::sqlFieldTypeValueArrayByFieldNameArray ($columnNameArray, $tableName);
         
         $fieldTypeArray = self::getTypeArrayFromTypeValueArray($columnNameArray);
@@ -146,7 +150,7 @@ class SQLContentProvider {
         $returnID = NULL;
         
         if ($columnNameArray != NULL && $fieldTypeArray != NULL && count($columnNameArray) == count($fieldTypeArray)) {
-            $sqlConnection = self::sqlConnect();
+            $sqlConnection = isset($pSqlConnection) ? $pSqlConnection : self::sqlConnect();
             $sqlStatement = $sqlConnection->prepare($sqlQuery);
             
             if (count($columnNameArray) > 0) {
@@ -293,7 +297,7 @@ class SQLContentProvider {
      *
      * @return   MySQLi database connection
      */
-    private static function sqlConnect () {
+    public static function sqlConnect () {
         $connection = mysqli_connect(self::SQLSERVER, self::SQLUSER, self::SQLPASS, self::SQLDB);
         
         if (mysqli_connect_error()) {
