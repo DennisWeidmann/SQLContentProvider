@@ -188,7 +188,7 @@ class SQLContentProvider {
             return $fieldTypeValueArray;
         }
 
-        $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
+        $fieldTypeInfos = self::parseSQLFieldTypeValueArray($tableName);
 
         foreach ($fieldNameArray as $key => $value) {
             array_push($fieldTypeValueArray, array("name" => $value, "type" => $fieldTypeInfos[strtolower($tableName)][$value]));
@@ -203,9 +203,9 @@ class SQLContentProvider {
      *
      * @return   array
      */
-    private static function parseSQLFieldTypeValueArray () {        
-        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?";
-        $newTypesArray = self::getData($sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
+    private static function parseSQLFieldTypeValueArray ($tableName) {        
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND LOWER(TABLE_NAME) = ?";
+        $newTypesArray = self::getData($sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA", "TABLE_NAME"), array(self::SQLDB, strtolower($tableName)));
 
         $databaseTypesObject = array();
         foreach ($newTypesArray as $newTypesIndex => $newTypesOject) {
