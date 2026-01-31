@@ -176,11 +176,19 @@ class SQLContentProvider {
      * @return   array
      */
     private static function sqlFieldTypeValueArrayByFieldNameArray ($fieldNameArray, $tableName) {
-        if ($tableName == "INFORMATION_SCHEMA") { return array(array("name" => "TABLE_SCHEMA", "type" => "s"), array("name" => "TABLE_NAME", "type" => "s")); }
-
         $fieldTypeValueArray = array();
 
-        $fieldTypeInfos = self::parseSQLFieldTypeValueArray($tableName);
+        if ($tableName == "INFORMATION_SCHEMA") {
+            foreach ($fieldNameArray as $key => $value) {
+                switch ($value) {
+                    case 'TABLE_SCHEMA':
+                        array_push($fieldTypeValueArray, array("name" => $value, "type" => "s"));
+                }
+            }
+            return $fieldTypeValueArray;
+        }
+
+        $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
 
         foreach ($fieldNameArray as $key => $value) {
             array_push($fieldTypeValueArray, array("name" => $value, "type" => $fieldTypeInfos[strtolower($tableName)][$value]));
@@ -195,9 +203,9 @@ class SQLContentProvider {
      *
      * @return   array
      */
-    private static function parseSQLFieldTypeValueArray ($tableName) {
-        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND LOWER(TABLE_NAME) = LOWER(?)";
-        $newTypesArray = self::getData(NULL, $sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA", "TABLE_NAME"), array(self::SQLDB, $tableName));
+    private static function parseSQLFieldTypeValueArray () {
+        $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?";
+        $newTypesArray = self::getData(NULL, $sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
 
         $databaseTypesObject = array();
         foreach ($newTypesArray as $newTypesIndex => $newTypesOject) {
