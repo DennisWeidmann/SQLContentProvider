@@ -205,7 +205,7 @@ class SQLContentProvider {
      */
     private static function parseSQLFieldTypeValueArray () {
         $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?";
-        $newTypesArray = self::getData($sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
+        $newTypesArray = self::getData(NULL, $sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
 
         $databaseTypesObject = array();
         foreach ($newTypesArray as $newTypesIndex => $newTypesOject) {
