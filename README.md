@@ -10,7 +10,6 @@ const SQLSERVER = "";
 const SQLDB = "";
 const SQLUSER = "";
 const SQLPASS = "";
-const SQLCONTENTPROVIDERCACHEFILE = "";
 ```
 
 ### Usage example
