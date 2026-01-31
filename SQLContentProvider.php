@@ -40,9 +40,6 @@ class SQLContentProvider {
     /** @const Class constant MySQL Password */
     const SQLPASS = "";
 
-    /** @const Class constant Data Types cache file */
-    const SQLCONTENTPROVIDERCACHEFILE = "SQLContentProviderDataTypes.json";
-
 
     /**
      * Read data from database, returning an associative array with the results
@@ -191,21 +188,9 @@ class SQLContentProvider {
             return $fieldTypeValueArray;
         }
 
-        $fieldTypeInfos = array();
-        if (!file_exists(self::SQLCONTENTPROVIDERCACHEFILE)) {
-            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-        } else {
-            $fieldTypeInfos = json_decode(file_get_contents(self::SQLCONTENTPROVIDERCACHEFILE), true);
-        }
-
-        if (!array_key_exists(strtolower($tableName), $fieldTypeInfos)) {
-            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-        }
+        $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
 
         foreach ($fieldNameArray as $key => $value) {
-            if (!array_key_exists($value, $fieldTypeInfos[strtolower($tableName)])) {
-                $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-            }
             array_push($fieldTypeValueArray, array("name" => $value, "type" => $fieldTypeInfos[strtolower($tableName)][$value]));
         }
         
@@ -229,8 +214,6 @@ class SQLContentProvider {
             $currentColumnType = strtolower(self::preparedStatementTypeFromDataType($newTypesOject["DATA_TYPE"]));
             $databaseTypesObject[$currentTableName][$currentColumnName] = $currentColumnType;
         }
-
-        file_put_contents(self::SQLCONTENTPROVIDERCACHEFILE, json_encode($databaseTypesObject));
 
         return $databaseTypesObject;
     }
