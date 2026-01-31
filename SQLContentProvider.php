@@ -40,9 +40,6 @@ class SQLContentProvider {
     /** @const Class constant MySQL Password */
     const SQLPASS = "";
 
-    /** @const Class constant Data Types cache file */
-    const SQLCONTENTPROVIDERCACHEFILE = "SQLContentProviderDataTypes.json";
-
 
     /**
      * Read data from database, returning an associative array with the results
@@ -191,21 +188,9 @@ class SQLContentProvider {
             return $fieldTypeValueArray;
         }
 
-        $fieldTypeInfos = array();
-        if (!file_exists(self::SQLCONTENTPROVIDERCACHEFILE)) {
-            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-        } else {
-            $fieldTypeInfos = json_decode(file_get_contents(self::SQLCONTENTPROVIDERCACHEFILE), true);
-        }
-
-        if (!array_key_exists(strtolower($tableName), $fieldTypeInfos)) {
-            $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-        }
+        $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
 
         foreach ($fieldNameArray as $key => $value) {
-            if (!array_key_exists($value, $fieldTypeInfos[strtolower($tableName)])) {
-                $fieldTypeInfos = self::parseSQLFieldTypeValueArray();
-            }
             array_push($fieldTypeValueArray, array("name" => $value, "type" => $fieldTypeInfos[strtolower($tableName)][$value]));
         }
         
@@ -218,9 +203,9 @@ class SQLContentProvider {
      *
      * @return   array
      */
-    private static function parseSQLFieldTypeValueArray () {        
+    private static function parseSQLFieldTypeValueArray () {
         $sqlQuery = "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ?";
-        $newTypesArray = self::getData($sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
+        $newTypesArray = self::getData(NULL, $sqlQuery, "INFORMATION_SCHEMA", array("TABLE_SCHEMA"), array(self::SQLDB));
 
         $databaseTypesObject = array();
         foreach ($newTypesArray as $newTypesIndex => $newTypesOject) {
@@ -229,8 +214,6 @@ class SQLContentProvider {
             $currentColumnType = strtolower(self::preparedStatementTypeFromDataType($newTypesOject["DATA_TYPE"]));
             $databaseTypesObject[$currentTableName][$currentColumnName] = $currentColumnType;
         }
-
-        file_put_contents(self::SQLCONTENTPROVIDERCACHEFILE, json_encode($databaseTypesObject));
 
         return $databaseTypesObject;
     }
